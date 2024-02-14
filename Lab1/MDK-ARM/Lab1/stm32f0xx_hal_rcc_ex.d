@@ -8,9 +8,9 @@ lab1/stm32f0xx_hal_rcc_ex.o: \
   ..\Drivers\CMSIS\Device\ST\STM32F0xx\Include\stm32f072xb.h \
   ..\Drivers\CMSIS\Include\core_cm0.h \
   C:\Keil_v5\ARM\ARMCLANG\include\stdint.h \
-  D:\Downloads\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_version.h \
-  D:\Downloads\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_compiler.h \
-  D:\Downloads\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_armclang.h \
+  D:\Downloads\ECE6780\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_version.h \
+  D:\Downloads\ECE6780\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_compiler.h \
+  D:\Downloads\ECE6780\ECE6780\Lab1\Drivers\CMSIS\Include\cmsis_armclang.h \
   C:\Keil_v5\ARM\ARMCLANG\include\arm_compat.h \
   C:\Keil_v5\ARM\ARMCLANG\include\arm_acle.h \
   ..\Drivers\CMSIS\Device\ST\STM32F0xx\Include\system_stm32f0xx.h \
