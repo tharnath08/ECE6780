@@ -51,8 +51,8 @@ void SystemClock_Config(void);
 
 
 void TIM2_IRQHandler(void){
+	GPIOC->ODR ^= (1 << 8);
 	GPIOC->ODR ^= (1 << 9);
-	GPIOC->ODR ^= (1 << 6);
 	TIM2->SR &= ~(1<<0);
 }
 
@@ -79,22 +79,23 @@ int main(void)
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 	TIM2->PSC = 7999;
 	TIM2->ARR = 250;
-	TIM3->PSC = 1999;
-	TIM3->ARR = 5;
+	TIM3->PSC = 999;
+	TIM3->ARR = 10;
 	
 	TIM3->CCMR1 &= ~((1<<0)|(1<<1)|(1<<9)|(1<<8)|(1<<12));
 	TIM3->CCMR1 |= ((1<<4)|(1<<5)|(1<<6)|(1<<13)|(1<<14)|(1<<3)|(1<<11));
 	TIM3->CCER |= ((1<<0)|(1<<4));
 	TIM2->DIER |= (1 << 0);
-	TIM2->CR1 |= (1<<0);
-	//TIM2->EGR |= (1<<0);
+	
+	TIM3->CCR1 = 1;
+	TIM3->CCR2 = 1;
 	
 	NVIC_SetPriority(TIM2_IRQn, 1);
 	NVIC_EnableIRQ( TIM2_IRQn );
 	
 	
-	GPIOC->MODER |= ((1 << 12)|(1 << 14) | (1 << 16) | (1 << 18));
-	GPIOC->MODER &= ~((1 << 13)|(1 << 15) | (1 << 17) | (1 << 19));
+	GPIOC->MODER |= ((1 << 13)|(1 << 15) | (1 << 16) | (1 << 18));
+	GPIOC->MODER &= ~((1 << 12)|(1 << 14) | (1 << 17) | (1 << 19));
 	
 	GPIOC->OTYPER &= ~((1 << 6)|(1 << 7) | (1 << 8) | (1 << 9));
 	
@@ -102,13 +103,15 @@ int main(void)
 	
 	GPIOC->PUPDR &= ~((1 << 13)|(1 << 15)|(1 << 12)|(1 << 14)|(1 << 16) | (1 << 18)|(1 << 17) | (1 << 19));
 	
-	GPIOC->ODR |= (1 << 8);
-	GPIOC->ODR |= (1 << 9);
+	//GPIOC->AFR[0] &= ~(GPIO_AFRL_AFSEL6|GPIO_AFRL_AFSEL7);
 	
+	GPIOC->ODR |= (1 << 8);
+	TIM2->EGR |= (1<<0);
+	TIM3->CR1 |= (1<<0);
+	TIM2->CR1 |= (1<<0);
   while (1)
   {
-		HAL_Delay(500);
-    GPIOC->ODR ^= (1 << 8);
+
   }
   /* USER CODE END 3 */
 }
