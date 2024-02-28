@@ -103,7 +103,7 @@ int main(void)
 	
 	GPIOC->PUPDR &= ~((1 << 13)|(1 << 15)|(1 << 12)|(1 << 14)|(1 << 16) | (1 << 18)|(1 << 17) | (1 << 19));
 	
-	//GPIOC->AFR[0] &= ~(GPIO_AFRL_AFSEL6|GPIO_AFRL_AFSEL7);
+	GPIOC->AFR[0] &= ~(GPIO_AFRL_AFSEL6|GPIO_AFRL_AFSEL7);
 	
 	GPIOC->ODR |= (1 << 8);
 	TIM2->EGR |= (1<<0);
