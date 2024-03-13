@@ -129,53 +129,33 @@ int main(void)
   {		
 		//USART3->TDR = (1<<6);
 		if(newdata == 1){
-				USART3->TDR = operation;
-				USART3->TDR = led;
 				switch(led){
 				case 82:
-					if(operation == 48){
-						GPIOC->ODR &= ~(1<<6);
-					}else if(operation == 49){
-						GPIOC->ODR |= (1<<6);
-					}else if(operation == 50){
-						GPIOC->ODR ^= (1<<6);
-					}
+					led_pin = (1<<6);
 					break;
 				case 66:
-					if(operation == 48){
-						GPIOC->ODR &= ~(1<<7);
-					}else if(operation == 49){
-						GPIOC->ODR |= (1<<7);
-					}else if(operation == 50){
-						GPIOC->ODR ^= (1<<7);
-					}
+					led_pin = (1<<7);
 					break;
 				case 71:
-					if(operation == 48){
-						GPIOC->ODR &= ~(1<<9);
-					}else if(operation == 49){
-						GPIOC->ODR |= (1<<9);
-					}else if(operation == 50){
-						GPIOC->ODR ^= (1<<9);
-					}
+					led_pin = (1<<9);
 					break;
 				case 79:
-					if(operation == 48){
-						GPIOC->ODR &= ~(1<<8);
-					}else if(operation == 49){
-						GPIOC->ODR |= (1<<8);
-					}else if(operation == 50){
-						GPIOC->ODR ^= (1<<8);
-					}
+					led_pin = (1<<8);
 					break;
 				default:
 					if(led >= 65 && led <= 122 ){
 						UART3_SendStr("Invalid Input\n");
 					}
-					
 					break;
 				}
-			
+				USART3->TDR = led_pin;
+				if(operation == 0){
+					GPIOC->ODR &= ~(led_pin);
+				}else if(operation == 1){
+					GPIOC->ODR |= (led_pin);
+				}else{
+					GPIOC->ODR ^= led_pin;
+				}
 				UART3_SendStr("\nCMD:: ");
 				newdata = NULL;
 				led = NULL;
