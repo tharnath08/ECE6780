@@ -62,33 +62,31 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+  RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+	
+	GPIOB->MODER |= ((1 << 23) | (1 << 27) | (1<<28));
+	GPIOB->MODER &= ~((1 << 22) | (1<<26) | (1<<29));
+	
+	GPIOC->MODER |= (1<<0);
+	GPIOC->MODER &= ~(1<<1);
+	
+	GPIOC->OTYPER &= ~(1<<0);
 
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	GPIOB->OTYPER |= ((1 << 11)| (1<<13));
+	GPIOB->OTYPER &= ~(1<<14);
+	
+	GPIOB->AFR[1] |= ((1<<12)|(1<<22)|(1<<20));
+	GPIOB->AFR[1] &= ~((1<<13) | (1<<14) | (1<<15) | (1<<21) | (1<<23));
+	
+	GPIOB->ODR = (1<<14);
+	GPIOC->ODR = (1<<0);
+	
+	
   while (1)
   {
     /* USER CODE END WHILE */
