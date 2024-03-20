@@ -18,43 +18,17 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32f072xb.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
+void transmitToI2C2(uint8_t slvAddr, uint8_t noOfBits, uint8_t txdrData);
+uint8_t receiveFromI2C2(uint8_t slvAddr, uint8_t noOfBits);
+void initLEDs(void);
+void initI2C2(void);
+void part1(void);
+void initGyro(void);
+void senseGyro(void);
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -62,44 +36,285 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  
   HAL_Init();
   SystemClock_Config();
-
-  RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 	
-	GPIOB->MODER |= ((1 << 23) | (1 << 27) | (1<<28));
-	GPIOB->MODER &= ~((1 << 22) | (1<<26) | (1<<29));
+		
+	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+  RCC->AHBENR |= (RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOBEN);
 	
-	GPIOC->MODER |= (1<<0);
-	GPIOC->MODER &= ~(1<<1);
+	// initialize LEDs
+	initLEDs();
+	// initialize I2C2
+	initI2C2();	
 	
-	GPIOC->OTYPER &= ~(1<<0);
-
-	GPIOB->OTYPER |= ((1 << 11)| (1<<13));
-	GPIOB->OTYPER &= ~(1<<14);
-	
-	GPIOB->AFR[1] |= ((1<<12)|(1<<22)|(1<<20));
-	GPIOB->AFR[1] &= ~((1<<13) | (1<<14) | (1<<15) | (1<<21) | (1<<23));
-	
-	GPIOB->ODR = (1<<14);
-	GPIOC->ODR = (1<<0);
-	
+	// Part 1
+	//part1();
+	// Part 2 initialize
+	initGyro();
 	
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+		// Part 2 Gyro
+   senseGyro();
   }
-  /* USER CODE END 3 */
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+
+uint8_t receiveFromI2C2(uint8_t slvAddr, uint8_t noOfBits){
+		
+	// Clear the NBYTES and SADD bit fields
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+	
+	I2C2->CR2 |= (slvAddr << I2C_CR2_SADD_Pos);   	// Set the L3GD20 slave address = slvAddr
+	I2C2->CR2 |= (noOfBits  << I2C_CR2_NBYTES_Pos); // Set the number of bytes to transmit = noOfBits
+	I2C2->CR2 |= (I2C_CR2_RD_WRN_Msk);         			// Set the RD_WRN to read operation
+	I2C2->CR2 |= (I2C_CR2_START_Msk);          			// Set START bit
+	
+	// Wait until RXNE or NACKF flags are set
+	while(1) {
+		// Continue if RXNE flag is set
+		if ((I2C2->ISR & I2C_ISR_RXNE)) {
+			break;
+		}
+		
+		// Light ORANGE LED if NACKF flag is set (slave didn't respond)
+		if ((I2C2->ISR & I2C_ISR_NACKF)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+			continue;
+		}
+	}
+	// Wait for TC flag is set
+	while(1) {
+		if (I2C2->ISR & I2C_ISR_TC) {
+			break;
+		}		
+	}
+	  
+	return I2C2->RXDR;;
+}
+
+
+void transmitToI2C2(uint8_t slvAddr, uint8_t noOfBits, uint8_t txdrData){
+	// Clear the NBYTES and SADD bit fields
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+	
+	I2C2->CR2 |= (slvAddr << I2C_CR2_SADD_Pos);   	// Set the L3GD20 slave address = slvAddr
+	I2C2->CR2 |= (noOfBits  << I2C_CR2_NBYTES_Pos); // Set the number of bytes to transmit = noOfBits
+	I2C2->CR2 &= ~(I2C_CR2_RD_WRN_Msk);        			// Set the RD_WRN to write operation
+	I2C2->CR2 |= (I2C_CR2_START_Msk);          			// Set START bit
+
+	// Wait until TXIS or NACKF flags are set
+	while(1) {
+		// Continue if TXIS flag is set
+		if ((I2C2->ISR & I2C_ISR_TXIS)) {
+			I2C2->TXDR = txdrData; // Set I2C2->TXDR = txdrData
+			break;
+		}
+		
+		// Light ORANGE LED if NACKF flag is set (slave didn't respond)
+		if ((I2C2->ISR & I2C_ISR_NACKF)) {
+			//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+			continue;
+		}
+	}
+	
+	// Wait for TC flag is set
+	while(1) {
+		if (I2C2->ISR & I2C_ISR_TC) {
+			break;
+		}
+	}
+	
+}
+
+
+/* Initialize all configured peripherals */
+void initI2C2(void) {
+	
+	// Set PB11 - AF1
+	GPIOB->MODER |= (GPIO_MODER_MODER11_1);          
+	GPIOB->OTYPER |= (GPIO_OTYPER_OT_11);            
+	GPIOB->AFR[1] |= (0x1 << GPIO_AFRH_AFSEL11_Pos); 
+	
+	// Set PB13 - AF5
+	GPIOB->MODER |= (GPIO_MODER_MODER13_1);          
+	GPIOB->OTYPER |= (GPIO_OTYPER_OT_13);            
+	GPIOB->AFR[1] |= (0x5 << GPIO_AFRH_AFSEL13_Pos); 
+	
+	// Set PB14 - initialize high
+	GPIOB->MODER |= (GPIO_MODER_MODER14_0);              
+	GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_14);  
+	GPIOB->ODR |= (1<<14);	
+
+	// Set PC0 - initialize high
+	GPIOC->MODER |= (GPIO_MODER_MODER0_0);              
+	GPIOC->OTYPER &= ~(GPIO_OTYPER_OT_0);               
+	GPIOC->ODR |= (1<<0);
+
+	
+	I2C2->TIMINGR |= (0x1  << I2C_TIMINGR_PRESC_Pos);  
+	I2C2->TIMINGR |= (0x13 << I2C_TIMINGR_SCLL_Pos);   
+	I2C2->TIMINGR |= (0x0F << I2C_TIMINGR_SCLH_Pos);   
+	I2C2->TIMINGR |= (0x2  << I2C_TIMINGR_SDADEL_Pos); 
+	I2C2->TIMINGR |= (0x4  << I2C_TIMINGR_SCLDEL_Pos); 
+	
+	
+	I2C2->CR1 |= I2C_CR1_PE; 
+	
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+}
+
+
+
+/* Initialize the LEDs*/
+void initLEDs(void) {	
+	
+	GPIOC->MODER |= ((1 << 12)|(1 << 14) | (1 << 16) | (1 << 18));
+	GPIOC->MODER &= ~((1 << 13)|(1 << 15) | (1 << 17) | (1 << 19));
+	
+	GPIOC->OTYPER &= ~((1 << 6)|(1 << 7) | (1 << 8) | (1 << 9));
+	
+	GPIOC->OSPEEDR &= ~((1 << 12)|(1 << 14)|(1 << 16)|(1 << 18 ));
+	
+	GPIOC->PUPDR &= ~((1 << 13)|(1 << 15)|(1 << 12)|(1 << 14)|(1 << 16) | (1 << 18)|(1 << 17) | (1 << 19));
+	
+	GPIOC->ODR &= ~((1<<6)|(1<<7)|(1<<8)|(1<<9));
+
+}
+
+
+
+/* Part 1 */
+void part1(void) {
+	
+	transmitToI2C2(0xD2, 0x1, 0x0F);
+	uint8_t receivedValue = receiveFromI2C2(0xD2, 0x1);
+	
+	if (receivedValue == 0xD3) {
+		HAL_Delay(500);
+		GPIOC->ODR ^= (1<<9);
+		HAL_Delay(500);
+		GPIOC->ODR ^= (1<<9);
+		HAL_Delay(500);
+		GPIOC->ODR ^= (1<<9);
+	}
+	
+	
+	I2C2->CR2 |= (I2C_CR2_STOP);
+} 
+
+
+
+/* Part 2 Initialize */
+void initGyro(void) {
+	//transmitToI2C2(0xD2, 0x2, 0x20); //address of the "CTRL_REG1" = 0x20
+	//transmitToI2C2(0xD2, 0x2, 0x0B); //address of the "normal or sleep mode" = 0x0B
+	
+	
+	I2C2->CR2 |= (0xD2 << I2C_CR2_SADD_Pos);   
+	I2C2->CR2 |= (0x2  << I2C_CR2_NBYTES_Pos); 
+	I2C2->CR2 &= ~(I2C_CR2_RD_WRN_Msk);
+	I2C2->CR2 |= (I2C_CR2_START_Msk);
+	
+	// Wait until TXIS or NACKF flags are set (1)
+	while(1) {
+		if (I2C2->ISR & I2C_ISR_TXIS) {
+			I2C2->TXDR = 0x20;
+			break;
+		}
+		
+		if (I2C2->ISR & I2C_ISR_NACKF) {
+		}
+	}
+	
+	
+	// Wait again until TXIS or NACKF flags are set (2)
+	while(1) {
+		if (I2C2->ISR & I2C_ISR_TXIS) {
+			I2C2->TXDR = 0x0B;
+			break;
+		}
+		
+		if (I2C2->ISR & I2C_ISR_NACKF) {
+		}
+	}
+	
+	// Wait for TC flag is set
+	while(1) {
+		if (I2C2->ISR & I2C_ISR_TC) {
+			break;
+		}	
+	}
+	
+	
+}
+
+
+
+
+uint8_t x_byte1;
+uint8_t x_byte2;
+int16_t x;
+int16_t x_dir = 0;
+
+uint8_t y_byte1;
+uint8_t y_byte2;
+int16_t y;
+int16_t y_dir = 0;
+
+
+/* Part 2 Gyro */
+void senseGyro(void) {
+	transmitToI2C2(0xD2, 0x1, 0x28); // OUT_X_L = 0x28
+	x_byte1 = receiveFromI2C2(0xD2, 0x1);
+	
+	transmitToI2C2(0xD2, 0x1, 0x29); // OUT_X_H = 0x29
+	x_byte2 = receiveFromI2C2(0xD2, 0x1);
+	
+	transmitToI2C2(0xD2, 0x1, 0x2A); // OUT_Y_L = 0x2A
+	y_byte1 = receiveFromI2C2(0xD2, 0x1);
+	
+	transmitToI2C2(0xD2, 0x1, 0x2B); // OUT_Y_H = 0x2B
+	y_byte2 = receiveFromI2C2(0xD2, 0x1); 
+	
+		
+	x = (x_byte2 << 8) | (x_byte1 << 0);
+	x_dir += x;
+	
+	y = (y_byte2 << 8) | (y_byte1 << 0);
+	y_dir += y;
+	
+	/***********************************************************************/
+	
+	if (x_dir < -20) {
+		GPIOC->ODR |= (1<<8);
+		GPIOC->ODR &= ~(1<<9);
+	} else if (x_dir > 20){
+		GPIOC->ODR |= (1<<9);
+		GPIOC->ODR &= ~(1<<8);
+	} else{
+		GPIOC->ODR |= (1<<8);
+		GPIOC->ODR |= (1<<9);
+	}
+	
+	if (y_dir < -20) {
+		GPIOC->ODR |= (1<<6);
+		GPIOC->ODR &= ~(1<<7);
+	} else if((y_dir > 20)){
+		GPIOC->ODR |= (1<<7);
+		GPIOC->ODR &= ~(1<<6);
+	}else{
+		GPIOC->ODR |= (1<<6);
+		GPIOC->ODR |= (1<<7);
+	}
+	
+	HAL_Delay(100);
+}
+
+
+
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
