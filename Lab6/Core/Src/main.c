@@ -45,9 +45,46 @@
 
 /* USER CODE END PV */
 
+
+const uint8_t sine_table[32] = {127,151,175,197,216,232,244,251,254,251,244,
+232,216,197,175,151,127,102,78,56,37,21,9,2,0,2,9,21,37,56,78,102};
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void initLEDs(void);
 /* USER CODE BEGIN PFP */
+void initPA4(void) {
+	GPIOA->MODER &= ~(GPIO_MODER_MODER4_Msk);
+
+	GPIOA->MODER |= (GPIO_MODER_MODER4_Msk);
+	
+	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT_4);
+	
+	GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR4_Msk);
+	
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR4_Msk);
+}
+
+
+uint8_t index = 0;
+
+void waveDAC(void) {
+	DAC1->DHR8R1 = sine_table[index];
+	
+	index++;
+	if (index == 31) {
+		index = 0;
+	}
+	
+	HAL_Delay(1);
+}
+
+
+void initDAC(void) {
+	DAC1->CR |= (DAC_CR_TSEL1_Msk);
+	
+	DAC1->CR |= (DAC_CR_EN1_Msk);
+}
 
 /* USER CODE END PFP */
 
@@ -62,39 +99,61 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	
+	RCC->APB2ENR |= RCC_APB2ENR_ADCEN;
+	RCC->AHBENR |= (RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIOAEN) ;
+	
+	initLEDs();
+	
+	GPIOA->MODER |= (1<<2) | (1<<3);
+	GPIOA->PUPDR &= ~((1<<2)|(1<<3));
+	
+	ADC1->CFGR1 |= (1<<4)|(1<<13);	
+	//ADC1->CR |= ADC_CR_ADEN;
+	
+	ADC1->CFGR1 &= ~ADC_CFGR1_DMAEN; 
+	ADC1->CR |= ADC_CR_ADCAL; 
+	while ((ADC1->CR & ADC_CR_ADCAL) != 0) 
+	{
+	}
+	
+	ADC1->CHSELR |= ADC_CHSELR_CHSEL1;
+	ADC1->CR |= ADC_CR_ADEN;
+	ADC1->CR |= ADC_CR_ADSTART;
+	
+	
+	initPA4();
+	initDAC();
+	
+  uint16_t value = 0;
   while (1)
   {
-    /* USER CODE END WHILE */
+		
+		waveDAC();
+		value = ADC1->DR;
 
-    /* USER CODE BEGIN 3 */
+		if(value > 204){
+			GPIOC->ODR |= (1<<6);
+			GPIOC->ODR &= ~((1<<9)|(1<<8)|(1<<7));
+		}else if(value > 153){
+			GPIOC->ODR |= (1<<8);
+			GPIOC->ODR &= ~((1<<9)|(1<<6)|(1<<7));
+		}else if(value > 102){
+			GPIOC->ODR |= (1<<7);
+			GPIOC->ODR &= ~((1<<9)|(1<<6)|(1<<8));
+		}else if(value > 51){
+			GPIOC->ODR |= (1<<9);
+			GPIOC->ODR &= ~((1<<8)|(1<<6)|(1<<7));
+		}else{
+			GPIOC->ODR &= ~((1<<8)|(1<<6)|(1<<7)|(1<<9));
+		}
+		
+		ADC1->ISR |= (1<<2);
   }
+	
   /* USER CODE END 3 */
 }
 
@@ -132,6 +191,26 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
+
+
+
+void initLEDs(void) {	
+	
+	GPIOC->MODER |= ((1 << 12)|(1 << 14) | (1 << 16) | (1 << 18));
+	GPIOC->MODER &= ~((1 << 13)|(1 << 15) | (1 << 17) | (1 << 19));
+	
+	GPIOC->OTYPER &= ~((1 << 6)|(1 << 7) | (1 << 8) | (1 << 9));
+	
+	GPIOC->OSPEEDR &= ~((1 << 12)|(1 << 14)|(1 << 16)|(1 << 18 ));
+	
+	GPIOC->PUPDR &= ~((1 << 13)|(1 << 15)|(1 << 12)|(1 << 14)|(1 << 16) | (1 << 18)|(1 << 17) | (1 << 19));
+	
+	GPIOC->ODR &= ~((1<<6)|(1<<7)|(1<<8)|(1<<9));
+
+}
+
+
+
 
 /* USER CODE BEGIN 4 */
 
